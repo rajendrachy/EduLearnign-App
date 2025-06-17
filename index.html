@@ -484,6 +484,45 @@
             color: #6c757d;
         }
         
+        /* Subjects Section */
+        .subjects-section {
+            margin-top: 30px;
+        }
+        
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .subject-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .subject-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            background: #f0f4ff;
+        }
+        
+        .subject-card i {
+            font-size: 36px;
+            color: #4776E6;
+            margin-bottom: 15px;
+        }
+        
+        .subject-card h3 {
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
         /* Content Management */
         .content-management {
             background: white;
@@ -802,6 +841,10 @@
                 flex: 0 0 100%;
                 justify-content: center;
             }
+            
+            .subjects-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
         }
     </style>
 </head>
@@ -955,6 +998,13 @@
                     
                     <h2 class="dashboard-title" id="classTitle">Class Content</h2>
                     
+                    <div class="subjects-section">
+                        <h3 class="section-title">Subjects</h3>
+                        <div class="subjects-grid" id="adminSubjectsGrid">
+                            <!-- Subjects will be added here dynamically -->
+                        </div>
+                    </div>
+                    
                     <div class="content-management">
                         <h3 class="section-title">Add New Content</h3>
                         
@@ -965,6 +1015,12 @@
                                     <option value="note">Study Notes (PDF)</option>
                                     <option value="video">Video Lecture</option>
                                     <option value="text">Text Document</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="contentSubject">Subject</label>
+                                <select id="contentSubject">
+                                    <!-- Subjects will be populated dynamically -->
                                 </select>
                             </div>
                         </div>
@@ -1003,8 +1059,8 @@
                         <div class="content-list">
                             <div class="list-header">
                                 <div class="list-col">Type</div>
+                                <div class="list-col">Subject</div>
                                 <div class="list-col">Title</div>
-                                <div class="list-col">Description</div>
                                 <div class="list-col">Date Added</div>
                                 <div class="list-col-actions">Actions</div>
                             </div>
@@ -1061,6 +1117,13 @@
                     
                     <h2 class="dashboard-title" id="studentClassTitle">Class Content</h2>
                     
+                    <div class="subjects-section">
+                        <h3 class="section-title">Subjects</h3>
+                        <div class="subjects-grid" id="studentSubjectsGrid">
+                            <!-- Subjects will be added here dynamically -->
+                        </div>
+                    </div>
+                    
                     <div class="resource-grid" id="classResourcesGrid">
                         <!-- Resources will be added here dynamically -->
                     </div>
@@ -1096,9 +1159,12 @@
         const fileUploadGroup = document.getElementById('fileUploadGroup');
         const videoUrlGroup = document.getElementById('videoUrlGroup');
         const textContentGroup = document.getElementById('textContentGroup');
+        const contentSubjectSelect = document.getElementById('contentSubject');
         const contentListBody = document.getElementById('contentListBody');
         const adminClassesGrid = document.getElementById('adminClassesGrid');
         const studentClassesGrid = document.getElementById('studentClassesGrid');
+        const adminSubjectsGrid = document.getElementById('adminSubjectsGrid');
+        const studentSubjectsGrid = document.getElementById('studentSubjectsGrid');
         const classResourcesGrid = document.getElementById('classResourcesGrid');
         const backToClasses = document.getElementById('backToClasses');
         const backToStudentClasses = document.getElementById('backToStudentClasses');
@@ -1117,25 +1183,63 @@
         const classes = [
             { id: 'pg', name: 'Play Group', color: '#FF6B6B' },
             { id: 'nursery', name: 'Nursery', color: '#4ECDC4' },
-            { id: 'kg', name: 'Kindergarten', color: '#FFD166' },
-            { id: '1', name: 'Class 1', color: '#06D6A0' },
-            { id: '2', name: 'Class 2', color: '#118AB2' },
-            { id: '3', name: 'Class 3', color: '#073B4C' },
-            { id: '4', name: 'Class 4', color: '#EF476F' },
-            { id: '5', name: 'Class 5', color: '#7209B7' },
-            { id: '6', name: 'Class 6', color: '#3A86FF' },
-            { id: '7', name: 'Class 7', color: '#FB5607' },
-            { id: '8', name: 'Class 8', color: '#8338EC' },
-            { id: '9', name: 'Class 9', color: '#FF006E' },
-            { id: '10', name: 'Class 10', color: '#3A86FF' },
-            { id: '11', name: 'Class 11', color: '#06D6A0' },
-            { id: '12', name: 'Class 12', color: '#FFD166' }
+            { id: 'lkg', name: 'LKG', color: '#FFD166' },
+            { id: 'ukg', name: 'UKG', color: '#06D6A0' },
+            { id: '1', name: 'Class 1', color: '#118AB2' },
+            { id: '2', name: 'Class 2', color: '#073B4C' },
+            { id: '3', name: 'Class 3', color: '#EF476F' },
+            { id: '4', name: 'Class 4', color: '#7209B7' },
+            { id: '5', name: 'Class 5', color: '#3A86FF' },
+            { id: '6', name: 'Class 6', color: '#FB5607' },
+            { id: '7', name: 'Class 7', color: '#8338EC' },
+            { id: '8', name: 'Class 8', color: '#FF006E' },
+            { id: '9', name: 'Class 9', color: '#3A86FF' },
+            { id: '10', name: 'Class 10', color: '#06D6A0' },
+            { id: '11', name: 'Class 11', color: '#FFD166' },
+            { id: '12', name: 'Class 12', color: '#5a4d7a' }
         ];
+        
+        // Subjects for all classes
+        const subjects = {
+            pg: ['English', 'Maths', 'General Awareness'],
+            nursery: ['English', 'Maths', 'General Awareness'],
+            lkg: ['English', 'Maths', 'General Awareness'],
+            ukg: ['English', 'Maths', 'Science', 'Social Studies'],
+            '1': ['English', 'Maths', 'Science', 'Social Studies'],
+            '2': ['English', 'Maths', 'Science', 'Social Studies'],
+            '3': ['English', 'Maths', 'Science', 'Social Studies'],
+            '4': ['English', 'Maths', 'Science', 'Social Studies'],
+            '5': ['English', 'Maths', 'Science', 'Social Studies'],
+            '6': ['English', 'Maths', 'Science', 'Social Studies', 'Computer'],
+            '7': ['English', 'Maths', 'Science', 'Social Studies', 'Computer'],
+            '8': ['English', 'Maths', 'Science', 'Social Studies', 'Computer'],
+            '9': ['English', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Social Studies'],
+            '10': ['English', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Social Studies'],
+            '11': ['Physics', 'Chemistry', 'Maths', 'Biology', 'Computer Science', 'Commerce'],
+            '12': ['Physics', 'Chemistry', 'Maths', 'Biology', 'Computer Science', 'Commerce']
+        };
+        
+        // Subject icons
+        const subjectIcons = {
+            'English': 'menu_book',
+            'Maths': 'calculate',
+            'Science': 'biotech',
+            'Social Studies': 'public',
+            'General Awareness': 'psychology',
+            'Computer': 'computer',
+            'Physics': 'bolt',
+            'Chemistry': 'science',
+            'Biology': 'eco',
+            'Computer Science': 'code',
+            'Commerce': 'business'
+        };
         
         // Current user state
         let currentRole = 'student';
         let currentUser = null;
         let currentClass = null;
+        let currentSubject = null;
+        let currentBlobUrl = null; // For PDF handling
         
         // Content data
         let content = [];
@@ -1321,11 +1425,17 @@
             // Save content
             saveContentBtn.addEventListener('click', () => {
                 const contentType = document.getElementById('contentType').value;
+                const subject = document.getElementById('contentSubject').value;
                 const title = document.getElementById('contentTitle').value;
                 const description = document.getElementById('contentDescription').value;
                 
                 if (!title) {
                     alert('Please enter a title for the content');
+                    return;
+                }
+                
+                if (!subject) {
+                    alert('Please select a subject');
                     return;
                 }
                 
@@ -1348,6 +1458,7 @@
                         const newContent = {
                             id: Date.now(),
                             class: currentClass.id,
+                            subject: subject,
                             type: contentType,
                             title: title,
                             description: description,
@@ -1383,6 +1494,7 @@
                 const newContent = {
                     id: Date.now(),
                     class: currentClass.id,
+                    subject: subject,
                     type: contentType,
                     title: title,
                     description: description,
@@ -1418,6 +1530,11 @@
             closeModal.addEventListener('click', () => {
                 resourceModal.style.display = 'none';
                 previewContainer.innerHTML = '';
+                // Clean up blob URL
+                if (currentBlobUrl) {
+                    URL.revokeObjectURL(currentBlobUrl);
+                    currentBlobUrl = null;
+                }
             });
             
             // Close modal when clicking outside
@@ -1425,6 +1542,11 @@
                 if (e.target === resourceModal) {
                     resourceModal.style.display = 'none';
                     previewContainer.innerHTML = '';
+                    // Clean up blob URL
+                    if (currentBlobUrl) {
+                        URL.revokeObjectURL(currentBlobUrl);
+                        currentBlobUrl = null;
+                    }
                 }
             });
             
@@ -1490,16 +1612,23 @@
             
             classCard.addEventListener('click', () => {
                 currentClass = cls;
+                currentSubject = null;
                 
                 if (isAdmin) {
                     document.getElementById('classesSection').style.display = 'none';
                     document.getElementById('classContentSection').style.display = 'block';
                     classTitle.textContent = `${cls.name} Content`;
+                    
+                    // Render subjects for this class
+                    renderSubjects(cls.id, true);
                     renderClassContent();
                 } else {
                     document.getElementById('studentClassesSection').style.display = 'none';
                     document.getElementById('studentClassContentSection').style.display = 'block';
                     studentClassTitle.textContent = `${cls.name} Resources`;
+                    
+                    // Render subjects for this class
+                    renderSubjects(cls.id, false);
                     renderStudentClassResources();
                 }
             });
@@ -1507,17 +1636,63 @@
             return classCard;
         }
         
+        // Render subjects for a class
+        function renderSubjects(classId, isAdmin) {
+            const subjectsList = subjects[classId] || [];
+            const container = isAdmin ? adminSubjectsGrid : studentSubjectsGrid;
+            
+            container.innerHTML = '';
+            
+            // Populate subject dropdown
+            contentSubjectSelect.innerHTML = '';
+            subjectsList.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                contentSubjectSelect.appendChild(option);
+            });
+            
+            // Create subject cards
+            subjectsList.forEach(subject => {
+                const subjectCard = document.createElement('div');
+                subjectCard.className = 'subject-card';
+                subjectCard.innerHTML = `
+                    <i class="material-icons">${subjectIcons[subject] || 'book'}</i>
+                    <h3>${subject}</h3>
+                `;
+                
+                subjectCard.addEventListener('click', () => {
+                    currentSubject = subject;
+                    if (isAdmin) {
+                        renderClassContent();
+                    } else {
+                        renderStudentClassResources();
+                    }
+                });
+                
+                container.appendChild(subjectCard);
+            });
+        }
+        
         // Render class content for admin
         function renderClassContent() {
             contentListBody.innerHTML = '';
             
-            const classResources = content.filter(c => c.class === currentClass.id);
+            let classResources = content.filter(c => c.class === currentClass.id);
+            
+            if (currentSubject) {
+                classResources = classResources.filter(c => c.subject === currentSubject);
+            }
             
             if (classResources.length === 0) {
+                const message = currentSubject ? 
+                    `No content added yet for ${currentSubject}` : 
+                    'No content added yet for this class';
+                
                 contentListBody.innerHTML = `
                     <div class="list-row">
                         <div class="list-col" style="text-align: center; grid-column: 1 / span 5;">
-                            No content added yet
+                            ${message}
                         </div>
                     </div>
                 `;
@@ -1539,8 +1714,8 @@
                 
                 row.innerHTML = `
                     <div class="list-col">${typeIcon}</div>
+                    <div class="list-col">${resource.subject}</div>
                     <div class="list-col">${resource.title}</div>
-                    <div class="list-col">${resource.description}</div>
                     <div class="list-col">${resource.date}</div>
                     <div class="list-col-actions">
                         <button class="action-btn delete-btn" data-id="${resource.id}">
@@ -1556,14 +1731,21 @@
         function renderStudentClassResources() {
             classResourcesGrid.innerHTML = '';
             
-            const classResources = content.filter(c => c.class === currentClass.id);
+            let classResources = content.filter(c => c.class === currentClass.id);
+            
+            if (currentSubject) {
+                classResources = classResources.filter(c => c.subject === currentSubject);
+            }
             
             if (classResources.length === 0) {
+                const message = currentSubject ? 
+                    `No resources available for ${currentSubject}` : 
+                    'No resources available for this class';
+                
                 classResourcesGrid.innerHTML = `
                     <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
                         <i class="material-icons" style="font-size: 64px; color: #ccc; margin-bottom: 20px;">folder_open</i>
-                        <h3>No resources available</h3>
-                        <p>Check back later for learning materials</p>
+                        <h3>${message}</h3>
                     </div>
                 `;
                 return;
@@ -1599,6 +1781,7 @@
                         <h3>${resource.title}</h3>
                     </div>
                     <div class="resource-body">
+                        <p><strong>Subject:</strong> ${resource.subject}</p>
                         <p>${resource.description}</p>
                         <div class="resource-actions">
                             ${actionBtn}
@@ -1643,9 +1826,27 @@
             resourceModalTitle.textContent = resource.title;
             previewContainer.innerHTML = '';
             
+            // Clean up previous blob URL if exists
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;
+            }
+            
             if (resource.type === 'note') {
-                // PDF viewer
-                previewContainer.innerHTML = `<iframe src="${resource.file}"></iframe>`;
+                // PDF viewer - Fix for 404 error
+                const base64Data = resource.file.split(',')[1];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], {type: 'application/pdf'});
+                currentBlobUrl = URL.createObjectURL(blob);
+                
+                previewContainer.innerHTML = `<embed src="${currentBlobUrl}" type="application/pdf" width="100%" height="100%">`;
             } else if (resource.type === 'video') {
                 // Video player
                 if (resource.file.includes('youtube.com') || resource.file.includes('youtu.be')) {
@@ -1681,6 +1882,7 @@
         window.downloadResource = function(id, filename) {
             const resource = content.find(r => r.id === id);
             if (resource && resource.type === 'note') {
+                // Create a temporary link element
                 const link = document.createElement('a');
                 link.href = resource.file;
                 link.download = filename;
