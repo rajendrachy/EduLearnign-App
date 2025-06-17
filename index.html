@@ -789,6 +789,30 @@
             overflow: auto;
         }
         
+        /* Note Type Selector */
+        .note-type-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .note-type-btn {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .note-type-btn.selected {
+            background: #4776E6;
+            color: white;
+            border-color: #4776E6;
+        }
+        
         /* Responsive */
         @media (max-width: 900px) {
             .container {
@@ -1012,7 +1036,7 @@
                             <div class="form-group">
                                 <label for="contentType">Content Type</label>
                                 <select id="contentType">
-                                    <option value="note">Study Notes (PDF)</option>
+                                    <option value="note">Study Notes</option>
                                     <option value="video">Video Lecture</option>
                                     <option value="text">Text Document</option>
                                 </select>
@@ -1035,9 +1059,21 @@
                             <textarea id="contentDescription" placeholder="Enter content description"></textarea>
                         </div>
                         
-                        <div class="form-group" id="fileUploadGroup">
-                            <label for="contentFile">Upload PDF File</label>
-                            <input type="file" id="contentFile" accept=".pdf">
+                        <div id="noteTypeSection">
+                            <div class="note-type-selector">
+                                <div class="note-type-btn selected" id="uploadNoteBtn">Upload PDF</div>
+                                <div class="note-type-btn" id="linkNoteBtn">Add PDF Link</div>
+                            </div>
+                            
+                            <div class="form-group" id="fileUploadGroup">
+                                <label for="contentFile">Upload PDF File</label>
+                                <input type="file" id="contentFile" accept=".pdf">
+                            </div>
+                            
+                            <div class="form-group" id="pdfLinkGroup" style="display: none;">
+                                <label for="pdfLink">PDF Link</label>
+                                <input type="text" id="pdfLink" placeholder="Enter PDF URL (e.g., https://example.com/notes.pdf)">
+                            </div>
                         </div>
                         
                         <div class="form-group" id="videoUrlGroup" style="display: none;">
@@ -1157,6 +1193,7 @@
         const clearFormBtn = document.getElementById('clearForm');
         const contentTypeSelect = document.getElementById('contentType');
         const fileUploadGroup = document.getElementById('fileUploadGroup');
+        const pdfLinkGroup = document.getElementById('pdfLinkGroup');
         const videoUrlGroup = document.getElementById('videoUrlGroup');
         const textContentGroup = document.getElementById('textContentGroup');
         const contentSubjectSelect = document.getElementById('contentSubject');
@@ -1178,6 +1215,9 @@
         const closeModal = document.getElementById('closeModal');
         const previewContainer = document.getElementById('previewContainer');
         const resourceModalTitle = document.getElementById('resourceModalTitle');
+        const uploadNoteBtn = document.getElementById('uploadNoteBtn');
+        const linkNoteBtn = document.getElementById('linkNoteBtn');
+        const noteTypeSection = document.getElementById('noteTypeSection');
         
         // Classes from PG to Class 12
         const classes = [
@@ -1240,7 +1280,8 @@
         let currentClass = null;
         let currentSubject = null;
         let currentBlobUrl = null; // For PDF handling
-        
+        let noteType = 'upload'; // 'upload' or 'link'
+
         // Content data
         let content = [];
         
@@ -1407,19 +1448,30 @@
             
             // Content type change
             contentTypeSelect.addEventListener('change', function() {
-                if (this.value === 'video') {
-                    fileUploadGroup.style.display = 'none';
+                const type = this.value;
+                
+                // Hide all groups first
+                noteTypeSection.style.display = 'none';
+                videoUrlGroup.style.display = 'none';
+                textContentGroup.style.display = 'none';
+                
+                if (type === 'note') {
+                    noteTypeSection.style.display = 'block';
+                    setNoteType(noteType); // Show current note type
+                } else if (type === 'video') {
                     videoUrlGroup.style.display = 'block';
-                    textContentGroup.style.display = 'none';
-                } else if (this.value === 'text') {
-                    fileUploadGroup.style.display = 'none';
-                    videoUrlGroup.style.display = 'none';
+                } else if (type === 'text') {
                     textContentGroup.style.display = 'block';
-                } else {
-                    fileUploadGroup.style.display = 'block';
-                    videoUrlGroup.style.display = 'none';
-                    textContentGroup.style.display = 'none';
                 }
+            });
+            
+            // Note type selection
+            uploadNoteBtn.addEventListener('click', () => {
+                setNoteType('upload');
+            });
+            
+            linkNoteBtn.addEventListener('click', () => {
+                setNoteType('link');
             });
             
             // Save content
@@ -1446,35 +1498,44 @@
                 
                 let fileInfo = '';
                 if (contentType === 'note') {
-                    const fileInput = document.getElementById('contentFile');
-                    if (!fileInput.files[0]) {
-                        alert('Please upload a PDF file');
-                        return;
-                    }
-                    const file = fileInput.files[0];
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const dataURL = e.target.result;
-                        const newContent = {
-                            id: Date.now(),
-                            class: currentClass.id,
-                            subject: subject,
-                            type: contentType,
-                            title: title,
-                            description: description,
-                            file: dataURL,
-                            date: new Date().toLocaleDateString()
+                    if (noteType === 'upload') {
+                        const fileInput = document.getElementById('contentFile');
+                        if (!fileInput.files[0]) {
+                            alert('Please upload a PDF file');
+                            return;
+                        }
+                        const file = fileInput.files[0];
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const dataURL = e.target.result;
+                            const newContent = {
+                                id: Date.now(),
+                                class: currentClass.id,
+                                subject: subject,
+                                type: contentType,
+                                title: title,
+                                description: description,
+                                file: dataURL,
+                                date: new Date().toLocaleDateString()
+                            };
+                            
+                            content.push(newContent);
+                            localStorage.setItem('edulearn_content', JSON.stringify(content));
+                            
+                            alert(`"${title}" has been added successfully!`);
+                            clearForm();
+                            renderClassContent();
                         };
-                        
-                        content.push(newContent);
-                        localStorage.setItem('edulearn_content', JSON.stringify(content));
-                        
-                        alert(`"${title}" has been added successfully!`);
-                        clearForm();
-                        renderClassContent();
-                    };
-                    reader.readAsDataURL(file);
-                    return;
+                        reader.readAsDataURL(file);
+                        return;
+                    } else {
+                        const pdfLink = document.getElementById('pdfLink').value;
+                        if (!pdfLink) {
+                            alert('Please enter a PDF link');
+                            return;
+                        }
+                        fileInfo = pdfLink;
+                    }
                 } else if (contentType === 'text') {
                     const textContent = document.getElementById('textContent').value;
                     if (!textContent) {
@@ -1558,6 +1619,18 @@
                     deleteContent(id);
                 }
             });
+        }
+        
+        // Set note type (upload or link)
+        function setNoteType(type) {
+            noteType = type;
+            
+            // Update UI
+            uploadNoteBtn.classList.toggle('selected', type === 'upload');
+            linkNoteBtn.classList.toggle('selected', type === 'link');
+            
+            fileUploadGroup.style.display = type === 'upload' ? 'block' : 'none';
+            pdfLinkGroup.style.display = type === 'link' ? 'block' : 'none';
         }
         
         // Render classes for admin and student
@@ -1760,15 +1833,23 @@
                 
                 if (resource.type === 'note') {
                     icon = '<i class="material-icons">description</i>';
-                    actionBtn = `
-                        <button class="btn-primary" onclick="viewResource(${resource.id})">View PDF</button>
-                        <button class="btn-secondary" onclick="downloadResource(${resource.id}, '${resource.title}.pdf')">Download PDF</button>
-                    `;
+                    
+                    if (resource.file.startsWith('http')) {
+                        // PDF link
+                        actionBtn = `
+                            <button class="btn-primary" onclick="window.open('${resource.file}', '_blank')">Open PDF</button>
+                        `;
+                    } else {
+                        // Uploaded PDF
+                        actionBtn = `
+                            <button class="btn-primary" onclick="viewResource(${resource.id})">View PDF</button>
+                            <button class="btn-secondary" onclick="downloadResource(${resource.id}, '${resource.title}.pdf')">Download PDF</button>
+                        `;
+                    }
                 } else if (resource.type === 'video') {
                     icon = '<i class="material-icons">ondemand_video</i>';
                     actionBtn = `
                         <button class="btn-primary" onclick="viewResource(${resource.id})">Watch Video</button>
-                        <button class="btn-secondary" onclick="downloadVideo('${resource.file}', '${resource.title}.mp4')">Download Video</button>
                     `;
                 } else {
                     icon = '<i class="material-icons">article</i>';
@@ -1802,9 +1883,15 @@
             document.getElementById('contentTitle').value = '';
             document.getElementById('contentDescription').value = '';
             document.getElementById('contentFile').value = '';
+            document.getElementById('pdfLink').value = '';
             document.getElementById('videoUrl').value = '';
             document.getElementById('textContent').value = '';
-            fileUploadGroup.style.display = 'block';
+            
+            // Reset note type
+            setNoteType('upload');
+            
+            // Hide groups
+            noteTypeSection.style.display = 'block';
             videoUrlGroup.style.display = 'none';
             textContentGroup.style.display = 'none';
         }
@@ -1833,20 +1920,25 @@
             }
             
             if (resource.type === 'note') {
-                // PDF viewer - Fix for 404 error
-                const base64Data = resource.file.split(',')[1];
-                const byteCharacters = atob(base64Data);
-                const byteNumbers = new Array(byteCharacters.length);
-                
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                if (resource.file.startsWith('http')) {
+                    // External PDF link
+                    previewContainer.innerHTML = `<iframe src="${resource.file}"></iframe>`;
+                } else {
+                    // Uploaded PDF
+                    const base64Data = resource.file.split(',')[1];
+                    const byteCharacters = atob(base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], {type: 'application/pdf'});
+                    currentBlobUrl = URL.createObjectURL(blob);
+                    
+                    previewContainer.innerHTML = `<embed src="${currentBlobUrl}" type="application/pdf" width="100%" height="100%">`;
                 }
-                
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], {type: 'application/pdf'});
-                currentBlobUrl = URL.createObjectURL(blob);
-                
-                previewContainer.innerHTML = `<embed src="${currentBlobUrl}" type="application/pdf" width="100%" height="100%">`;
             } else if (resource.type === 'video') {
                 // Video player
                 if (resource.file.includes('youtube.com') || resource.file.includes('youtu.be')) {
@@ -1881,7 +1973,7 @@
         // Download resource
         window.downloadResource = function(id, filename) {
             const resource = content.find(r => r.id === id);
-            if (resource && resource.type === 'note') {
+            if (resource && resource.type === 'note' && !resource.file.startsWith('http')) {
                 // Create a temporary link element
                 const link = document.createElement('a');
                 link.href = resource.file;
@@ -1890,16 +1982,6 @@
                 link.click();
                 document.body.removeChild(link);
             }
-        };
-        
-        // Download video
-        window.downloadVideo = function(url, filename) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         };
         
         // Show admin dashboard
