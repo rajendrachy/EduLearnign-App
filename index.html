@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduLearn - Learning Platform</title>
+    <title>EduLearn - Enhanced Learning Platform</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -556,6 +556,16 @@
             font-weight: 500;
         }
         
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
         .content-list {
             margin-top: 30px;
             border: 1px solid #eee;
@@ -586,12 +596,23 @@
             flex: 1;
         }
         
+        .list-col-actions {
+            flex: 0.5;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
         .action-btn {
             background: none;
             border: none;
             cursor: pointer;
             margin-left: 10px;
             color: #4776E6;
+        }
+        
+        .delete-btn {
+            color: #dc3545;
         }
         
         /* Student View */
@@ -658,6 +679,77 @@
             background: #e2e8f0;
         }
         
+        /* Resource Preview Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .preview-container {
+            margin-top: 20px;
+            height: 70vh;
+        }
+        
+        .preview-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+        
+        .preview-container video {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+        
+        .text-preview {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 70vh;
+            overflow: auto;
+        }
+        
         /* Responsive */
         @media (max-width: 900px) {
             .container {
@@ -695,6 +787,20 @@
             .menu-item {
                 padding: 10px 15px;
                 white-space: nowrap;
+            }
+            
+            .list-header, .list-row {
+                flex-wrap: wrap;
+            }
+            
+            .list-col {
+                flex: 0 0 100%;
+                margin-bottom: 10px;
+            }
+            
+            .list-col-actions {
+                flex: 0 0 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -856,8 +962,9 @@
                             <div class="form-group">
                                 <label for="contentType">Content Type</label>
                                 <select id="contentType">
-                                    <option value="note">Study Notes</option>
+                                    <option value="note">Study Notes (PDF)</option>
                                     <option value="video">Video Lecture</option>
+                                    <option value="text">Text Document</option>
                                 </select>
                             </div>
                         </div>
@@ -882,6 +989,11 @@
                             <input type="text" id="videoUrl" placeholder="Enter video URL (YouTube, Vimeo, etc.)">
                         </div>
                         
+                        <div class="form-group" id="textContentGroup" style="display: none;">
+                            <label for="textContent">Text Content</label>
+                            <textarea id="textContent" placeholder="Enter your text content"></textarea>
+                        </div>
+                        
                         <div class="btn-group">
                             <button class="btn-primary" id="saveContent">Add Content</button>
                             <button class="btn-secondary" id="clearForm">Clear Form</button>
@@ -894,6 +1006,7 @@
                                 <div class="list-col">Title</div>
                                 <div class="list-col">Description</div>
                                 <div class="list-col">Date Added</div>
+                                <div class="list-col-actions">Actions</div>
                             </div>
                             
                             <div id="contentListBody">
@@ -956,6 +1069,15 @@
         </div>
     </div>
     
+    <!-- Resource Preview Modal -->
+    <div class="modal" id="resourceModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">&times;</button>
+            <h2 id="resourceModalTitle">Resource Preview</h2>
+            <div class="preview-container" id="previewContainer"></div>
+        </div>
+    </div>
+    
     <script>
         // DOM Elements
         const authContainer = document.getElementById('authContainer');
@@ -973,6 +1095,7 @@
         const contentTypeSelect = document.getElementById('contentType');
         const fileUploadGroup = document.getElementById('fileUploadGroup');
         const videoUrlGroup = document.getElementById('videoUrlGroup');
+        const textContentGroup = document.getElementById('textContentGroup');
         const contentListBody = document.getElementById('contentListBody');
         const adminClassesGrid = document.getElementById('adminClassesGrid');
         const studentClassesGrid = document.getElementById('studentClassesGrid');
@@ -985,6 +1108,10 @@
         const adminAvatar = document.getElementById('adminAvatar');
         const studentNameDisplay = document.getElementById('studentNameDisplay');
         const studentAvatar = document.getElementById('studentAvatar');
+        const resourceModal = document.getElementById('resourceModal');
+        const closeModal = document.getElementById('closeModal');
+        const previewContainer = document.getElementById('previewContainer');
+        const resourceModalTitle = document.getElementById('resourceModalTitle');
         
         // Classes from PG to Class 12
         const classes = [
@@ -1179,9 +1306,15 @@
                 if (this.value === 'video') {
                     fileUploadGroup.style.display = 'none';
                     videoUrlGroup.style.display = 'block';
+                    textContentGroup.style.display = 'none';
+                } else if (this.value === 'text') {
+                    fileUploadGroup.style.display = 'none';
+                    videoUrlGroup.style.display = 'none';
+                    textContentGroup.style.display = 'block';
                 } else {
                     fileUploadGroup.style.display = 'block';
                     videoUrlGroup.style.display = 'none';
+                    textContentGroup.style.display = 'none';
                 }
             });
             
@@ -1208,8 +1341,36 @@
                         alert('Please upload a PDF file');
                         return;
                     }
-                    const fileName = fileInput.files[0].name;
-                    fileInfo = fileName;
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const dataURL = e.target.result;
+                        const newContent = {
+                            id: Date.now(),
+                            class: currentClass.id,
+                            type: contentType,
+                            title: title,
+                            description: description,
+                            file: dataURL,
+                            date: new Date().toLocaleDateString()
+                        };
+                        
+                        content.push(newContent);
+                        localStorage.setItem('edulearn_content', JSON.stringify(content));
+                        
+                        alert(`"${title}" has been added successfully!`);
+                        clearForm();
+                        renderClassContent();
+                    };
+                    reader.readAsDataURL(file);
+                    return;
+                } else if (contentType === 'text') {
+                    const textContent = document.getElementById('textContent').value;
+                    if (!textContent) {
+                        alert('Please enter text content');
+                        return;
+                    }
+                    fileInfo = textContent;
                 } else {
                     const videoUrl = document.getElementById('videoUrl').value;
                     if (!videoUrl) {
@@ -1252,6 +1413,29 @@
                 document.getElementById('studentClassesSection').style.display = 'block';
                 document.getElementById('studentClassContentSection').style.display = 'none';
             });
+            
+            // Close modal
+            closeModal.addEventListener('click', () => {
+                resourceModal.style.display = 'none';
+                previewContainer.innerHTML = '';
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === resourceModal) {
+                    resourceModal.style.display = 'none';
+                    previewContainer.innerHTML = '';
+                }
+            });
+            
+            // Content list event delegation for delete buttons
+            contentListBody.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-btn')) {
+                    const btn = e.target.closest('.delete-btn');
+                    const id = parseInt(btn.dataset.id);
+                    deleteContent(id);
+                }
+            });
         }
         
         // Render classes for admin and student
@@ -1279,6 +1463,7 @@
             const classResources = content.filter(c => c.class === cls.id);
             const notesCount = classResources.filter(c => c.type === 'note').length;
             const videosCount = classResources.filter(c => c.type === 'video').length;
+            const textsCount = classResources.filter(c => c.type === 'text').length;
             
             classCard.innerHTML = `
                 <div class="class-header" style="background: ${cls.color}">
@@ -1294,6 +1479,10 @@
                         <div>
                             <div class="count">${videosCount}</div>
                             <div class="label">Videos</div>
+                        </div>
+                        <div>
+                            <div class="count">${textsCount}</div>
+                            <div class="label">Texts</div>
                         </div>
                     </div>
                 </div>
@@ -1327,7 +1516,7 @@
             if (classResources.length === 0) {
                 contentListBody.innerHTML = `
                     <div class="list-row">
-                        <div class="list-col" style="text-align: center; grid-column: 1 / span 4;">
+                        <div class="list-col" style="text-align: center; grid-column: 1 / span 5;">
                             No content added yet
                         </div>
                     </div>
@@ -1338,11 +1527,26 @@
             classResources.forEach(resource => {
                 const row = document.createElement('div');
                 row.className = 'list-row';
+                
+                let typeIcon = '';
+                if (resource.type === 'note') {
+                    typeIcon = '<i class="material-icons">description</i> Notes';
+                } else if (resource.type === 'video') {
+                    typeIcon = '<i class="material-icons">ondemand_video</i> Video';
+                } else {
+                    typeIcon = '<i class="material-icons">article</i> Text';
+                }
+                
                 row.innerHTML = `
-                    <div class="list-col">${resource.type === 'note' ? 'Notes' : 'Video'}</div>
+                    <div class="list-col">${typeIcon}</div>
                     <div class="list-col">${resource.title}</div>
                     <div class="list-col">${resource.description}</div>
                     <div class="list-col">${resource.date}</div>
+                    <div class="list-col-actions">
+                        <button class="action-btn delete-btn" data-id="${resource.id}">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </div>
                 `;
                 contentListBody.appendChild(row);
             });
@@ -1374,10 +1578,19 @@
                 
                 if (resource.type === 'note') {
                     icon = '<i class="material-icons">description</i>';
-                    actionBtn = `<button class="btn-primary" onclick="downloadResource('${resource.file}')">Download Notes</button>`;
-                } else {
+                    actionBtn = `
+                        <button class="btn-primary" onclick="viewResource(${resource.id})">View PDF</button>
+                        <button class="btn-secondary" onclick="downloadResource(${resource.id}, '${resource.title}.pdf')">Download PDF</button>
+                    `;
+                } else if (resource.type === 'video') {
                     icon = '<i class="material-icons">ondemand_video</i>';
-                    actionBtn = `<button class="btn-primary" onclick="watchVideo('${resource.file}')">Watch Video</button>`;
+                    actionBtn = `
+                        <button class="btn-primary" onclick="viewResource(${resource.id})">Watch Video</button>
+                        <button class="btn-secondary" onclick="downloadVideo('${resource.file}', '${resource.title}.mp4')">Download Video</button>
+                    `;
+                } else {
+                    icon = '<i class="material-icons">article</i>';
+                    actionBtn = `<button class="btn-primary" onclick="viewResource(${resource.id})">View Text</button>`;
                 }
                 
                 resourceCard.innerHTML = `
@@ -1407,18 +1620,84 @@
             document.getElementById('contentDescription').value = '';
             document.getElementById('contentFile').value = '';
             document.getElementById('videoUrl').value = '';
+            document.getElementById('textContent').value = '';
             fileUploadGroup.style.display = 'block';
             videoUrlGroup.style.display = 'none';
+            textContentGroup.style.display = 'none';
         }
         
-        // Download resource (simulated)
-        window.downloadResource = function(filename) {
-            alert(`Downloading ${filename}...\nIn a real application, this would download the file.`);
+        // Delete content
+        function deleteContent(id) {
+            if (confirm('Are you sure you want to delete this content?')) {
+                content = content.filter(c => c.id !== id);
+                localStorage.setItem('edulearn_content', JSON.stringify(content));
+                renderClassContent();
+            }
+        }
+        
+        // View resource
+        window.viewResource = function(id) {
+            const resource = content.find(r => r.id === id);
+            if (!resource) return;
+            
+            resourceModalTitle.textContent = resource.title;
+            previewContainer.innerHTML = '';
+            
+            if (resource.type === 'note') {
+                // PDF viewer
+                previewContainer.innerHTML = `<iframe src="${resource.file}"></iframe>`;
+            } else if (resource.type === 'video') {
+                // Video player
+                if (resource.file.includes('youtube.com') || resource.file.includes('youtu.be')) {
+                    // YouTube video
+                    let videoId = '';
+                    if (resource.file.includes('youtube.com')) {
+                        videoId = resource.file.split('v=')[1];
+                        const ampersandPos = videoId.indexOf('&');
+                        if (ampersandPos !== -1) {
+                            videoId = videoId.substring(0, ampersandPos);
+                        }
+                    } else if (resource.file.includes('youtu.be')) {
+                        videoId = resource.file.split('/').pop();
+                    }
+                    previewContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+                } else if (resource.file.includes('vimeo.com')) {
+                    // Vimeo video
+                    const videoId = resource.file.split('/').pop();
+                    previewContainer.innerHTML = `<iframe src="https://player.vimeo.com/video/${videoId}" allowfullscreen></iframe>`;
+                } else {
+                    // Generic video
+                    previewContainer.innerHTML = `<video controls><source src="${resource.file}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                }
+            } else {
+                // Text content
+                previewContainer.innerHTML = `<div class="text-preview">${resource.file}</div>`;
+            }
+            
+            resourceModal.style.display = 'flex';
         };
         
-        // Watch video (simulated)
-        window.watchVideo = function(url) {
-            alert(`Opening video: ${url}\nIn a real application, this would play the video.`);
+        // Download resource
+        window.downloadResource = function(id, filename) {
+            const resource = content.find(r => r.id === id);
+            if (resource && resource.type === 'note') {
+                const link = document.createElement('a');
+                link.href = resource.file;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        
+        // Download video
+        window.downloadVideo = function(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
         
         // Show admin dashboard
